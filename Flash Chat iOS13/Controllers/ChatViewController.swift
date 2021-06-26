@@ -16,7 +16,7 @@ class ChatViewController: UIViewController {
     
     let db = Firestore.firestore()
     
-    var messages: [Message]?
+    var messages: [Message] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -24,7 +24,7 @@ class ChatViewController: UIViewController {
         title = K.Names.titleApp
         navigationItem.hidesBackButton = true
         tableView.register(UINib(nibName: K.Cell.cellNibName, bundle: nil), forCellReuseIdentifier: K.Cell.cellIdentifier)
-        
+        tableView.reloadData()
         loadMessages()
     }
     
@@ -38,16 +38,16 @@ class ChatViewController: UIViewController {
                 if let e = error {
                     self.popoverError(stringError: K.Popovers.popoverErrorRetrievingData, error: e)
                 } else {
-                    if let snapshotDocuments = querySnapshot?.documents, self.messageTextfield.text != "" {
+                    if let snapshotDocuments = querySnapshot?.documents {
                         for doc in snapshotDocuments {
                             let data = doc.data()
                             if let sender = data[K.FStore.senderField] as? String, let messageBody = data[K.FStore.bodyField] as? String {
                                 let newMessage = Message(sender: sender, body: messageBody)
-                                self.messages?.append(newMessage)
-                                
+                                self.messages.append(newMessage)
+                
                                 DispatchQueue.main.async {
                                     self.tableView.reloadData()
-                                    let indexPath = IndexPath(row: self.messages!.count - 1, section: 0)
+                                    let indexPath = IndexPath(row: self.messages.count - 1, section: 0)
                                     self.tableView.scrollToRow(at: indexPath, at: .top, animated: true)
                                 }
                             }
@@ -59,7 +59,7 @@ class ChatViewController: UIViewController {
     
     @IBAction func sendPressed(_ sender: UIButton) {
         
-        if let messageBody = messageTextfield.text, let messageSender = Auth.auth().currentUser?.email {
+        if let messageBody = messageTextfield.text, let messageSender = Auth.auth().currentUser?.email, self.messageTextfield.text != "" {
             db.collection(K.FStore.collectionName).addDocument(data: [
                 K.FStore.senderField : messageSender,
                 K.FStore.bodyField : messageBody,
@@ -88,16 +88,16 @@ class ChatViewController: UIViewController {
 
 extension ChatViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return messages?.count ?? 0
+        return messages.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let message = messages?[indexPath.row]
+        let message = messages[indexPath.row]
         
         let cell = tableView.dequeueReusableCell(withIdentifier: K.Cell.cellIdentifier, for: indexPath) as! MessageCell
-        cell.label.text = message?.body
+        cell.label.text = message.body
         
-        if message?.sender == Auth.auth().currentUser?.email{
+        if message.sender == Auth.auth().currentUser?.email{
             cell.leftImageView.isHidden = true
             cell.rightImageView.isHidden = false
             cell.messageBubble.backgroundColor = UIColor(named: K.BrandColors.lightPurple)
